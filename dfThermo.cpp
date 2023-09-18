@@ -119,11 +119,13 @@ void dfThermo::setMassFraction(vector<double>& mass_fraction)
 
     this->mass_fraction = mass_fraction;
     double sum = 0.;
-    for (int i = 0; i < num_species; i++) {
+    for (int i = 0; i < num_species; ++i) {
         sum += mass_fraction[i] / molecular_weights[i];
     }
-    for (int i = 0; i < num_species; i++) {
+    meanMolecularWeight = 0.;
+    for (int i = 0; i < num_species; ++i) {
         mole_fraction[i] = mass_fraction[i] / (molecular_weights[i] * sum);
+        meanMolecularWeight += mole_fraction[i] * molecular_weights[i];
     }
 }
 
@@ -134,6 +136,16 @@ void dfThermo::calculateTPoly(double T)
     T_poly[2] = T_poly[1] * T_poly[1];
     T_poly[3] = T_poly[1] * T_poly[2];
     T_poly[4] = T_poly[2] * T_poly[2];
+}
+
+double dfThermo::calculatePsi(double T)
+{
+    return meanMolecularWeight / (GAS_CANSTANT * T);
+}
+
+double dfThermo::calculateRho(double p, double psi)
+{
+    return p * psi;
 }
 
 double dfThermo::calculateViscosity(double T)
@@ -186,7 +198,8 @@ double dfThermo::calculateThermoConductivity(double T)
     }
 
     double lambda_mix = 0.5 * (sum_conductivity + 1.0 / sum_inv_conductivity);
-    return lambda_mix;
+    double cp = calculateCp(T);
+    return lambda_mix / cp;
 }
 
 double dfThermo::calculateEnthalpy(double T)
@@ -235,7 +248,7 @@ double dfThermo::calculateTemperature(const double T_init, const double h_target
         T -= delta_T;
 
         if (fabs(delta_h) < atol || fabs(delta_T / T) < rtol) {
-            cout << "Convergence achieved within " << n << " steps" << endl;
+            // cout << "Convergence achieved within " << n << " steps" << endl;
             return T;
         }
     }

@@ -39,7 +39,7 @@ public:
     std::vector<std::string> species_names;
     std::vector<double> mass_fraction;
     std::vector<double> mole_fraction;
-
+    double meanMolecularWeight;
 
     // intermediate variables
     std::vector<double> T_poly;
@@ -58,6 +58,8 @@ public:
     // calculateTPoly
     void calculateTPoly(double T);
     // calculateViscosity must be called earlier than calculateThermoConductivity to calculate T_poly
+    double calculatePsi(double T);
+    double calculateRho(double p, double psi);
     double calculateViscosity(double T);
     double calculateThermoConductivity(double T);
     double calculateEnthalpy(double T);
