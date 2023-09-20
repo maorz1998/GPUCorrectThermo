@@ -43,18 +43,17 @@ int main()
         fread(Y[i].data(), sizeof(double), num_species, fp);
     }
     fclose(fp);
-
-    // initialize GPU data
-    double *d_p, *d_T, *d_he;
     
-    
-
     // CPU: correct Thermo loop
     double *T_new = new double[num_cells];
     double *psi = new double[num_cells];
     double *rho = new double[num_cells];
     double *mu = new double[num_cells];
     double *alpha = new double[num_cells];
+
+    // time monitor
+    clock_t start, end;
+    start = clock();
     for (int i = 0; i < num_cells; i++) {
         thermo.setMassFraction(Y[i]);
         T_new[i] = thermo.calculateTemperature(T[i], he[i]);
@@ -62,6 +61,42 @@ int main()
         rho[i] = thermo.calculateRho(p[i], psi[i]);
         mu[i] = thermo.calculateViscosity(T_new[i]);
         alpha[i] = thermo.calculateThermoConductivity(T_new[i]);
-        std::cout << "alpha[" << i << "] : " << alpha[i] << std::endl;
     }
+    end = clock();
+    std::cout << "CPU time : " << (double)(end - start) / CLOCKS_PER_SEC << " s" << std::endl;
+    
+    dfThermo GPUThermo("ES80_H2-7-16.yaml", num_cells);
+
+    // initialize GPU data
+    double *d_p, *d_T, *d_he, *d_Y;
+    checkCudaErrors(cudaMalloc((void**)&d_p, sizeof(double) * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_T, sizeof(double) * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_he, sizeof(double) * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_Y, sizeof(double) * num_cells * num_species));
+    checkCudaErrors(cudaMemcpy(d_p, p.data(), sizeof(double) * num_cells, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_T, T.data(), sizeof(double) * num_cells, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_he, he.data(), sizeof(double) * num_cells, cudaMemcpyHostToDevice));
+    for (int i = 0; i < num_species; i++) {
+        for (int j = 0; j < num_cells; j++) {
+            checkCudaErrors(cudaMemcpy(d_Y + i * num_cells + j, &Y[j][i], sizeof(double), cudaMemcpyHostToDevice));
+        } 
+    }
+
+    // GPU: correct Thermo
+    double *d_psi, *d_rho, *d_mu, *d_alpha;
+    checkCudaErrors(cudaMalloc((void**)&d_psi, sizeof(double) * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_rho, sizeof(double) * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_mu, sizeof(double) * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_alpha, sizeof(double) * num_cells));
+
+    start = clock();
+    GPUThermo.setMassFraction(d_Y);
+    GPUThermo.calculateTemperatureGPU(d_T, d_he, d_T, d_Y);
+    GPUThermo.calculatePsiGPU(d_T, d_psi);
+    GPUThermo.calculateRhoGPU(d_p, d_psi, d_rho);
+    GPUThermo.calculateViscosityGPU(d_T, d_mu);
+    GPUThermo.calculateThermoConductivityGPU(d_T, d_Y, d_alpha);
+    GPUThermo.sync();
+    end = clock();
+    std::cout << "GPU time : " << (double)(end - start) / CLOCKS_PER_SEC << " s" << std::endl;
 }
