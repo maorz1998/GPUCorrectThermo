@@ -74,20 +74,13 @@ dfThermo::dfThermo(string mechanism_file, int num_cells) : mechanism_file(mechan
 
     T_poly.resize(5);
 
+    /*
     // initialize device data
     checkCudaErrors(cudaMalloc((void**)&d_nasa_coeffs, sizeof(double) * num_species * 15));
     checkCudaErrors(cudaMalloc((void**)&d_viscosity_coeffs, sizeof(double) * num_species * 5));
     checkCudaErrors(cudaMalloc((void**)&d_thermal_conductivity_coeffs, sizeof(double) * num_species * 5));
     checkCudaErrors(cudaMalloc((void**)&d_binary_diffusion_coeffs, sizeof(double) * num_species * num_species * 5));
     checkCudaErrors(cudaMalloc((void**)&d_molecular_weights, sizeof(double) * num_species));
-
-    checkCudaErrors(cudaMalloc((void**)&d_mass_fraction, sizeof(double) * num_species * num_cells));
-    checkCudaErrors(cudaMalloc((void**)&d_mole_fraction, sizeof(double) * num_species * num_cells));
-    checkCudaErrors(cudaMalloc((void**)&d_mean_mole_weight, sizeof(double) * num_cells));
-    checkCudaErrors(cudaMalloc((void**)&d_T_poly, sizeof(double) * 5 * num_cells));
-
-    checkCudaErrors(cudaMalloc((void**)&d_species_viscosities, sizeof(double) * num_species * num_cells));
-    checkCudaErrors(cudaMalloc((void**)&d_species_thermal_conductivities, sizeof(double) * num_species * num_cells));
 
     // copy data from host to device
     for (int i = 0; i < num_species; i++) {
@@ -96,7 +89,27 @@ dfThermo::dfThermo(string mechanism_file, int num_cells) : mechanism_file(mechan
         checkCudaErrors(cudaMemcpy(d_thermal_conductivity_coeffs + i * 5, thermal_conductivity_coeffs[i].data(), sizeof(double) * 5, cudaMemcpyHostToDevice));
         checkCudaErrors(cudaMemcpy(d_binary_diffusion_coeffs + i * 5, binary_diffusion_coeffs[i].data(), sizeof(double) * 5 * num_species, cudaMemcpyHostToDevice));
     }
-    checkCudaErrors(cudaMemcpy(d_molecular_weights, molecular_weights.data(), sizeof(double) * num_species, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_molecular_weights, molecular_weights.data(), sizeof(double) * num_species, cudaMemcpyHostToDevice));*/
+
+    // constant memory
+    // printf("d_nasa_coeffs ptr = %p\n", d_nasa_coeffs);
+    // printf("nasa_coeffs ptr = %p\n", nasa_coeffs.data());
+    // for (int i = 0; i < 7; i++) {
+    //     printf("species = %d\n", i);
+    //     checkCudaErrors(cudaMemcpyToSymbol(d_nasa_coeffs + i * 15, nasa_coeffs[i].data(), sizeof(double) * 15));
+    //     checkCudaErrors(cudaMemcpyToSymbol(d_viscosity_coeffs + i * 5, viscosity_coeffs[i].data(), sizeof(double) * 5));
+    //     checkCudaErrors(cudaMemcpyToSymbol(d_thermal_conductivity_coeffs + i * 5, thermal_conductivity_coeffs[i].data(), sizeof(double) * 5));
+    //     checkCudaErrors(cudaMemcpyToSymbol(d_binary_diffusion_coeffs + i * 5, binary_diffusion_coeffs[i].data(), sizeof(double) * 5 * 7));
+    // }
+    // checkCudaErrors(cudaMemcpyToSymbol(d_molecular_weights, molecular_weights.data(), sizeof(double) * 7));
+    checkCudaErrors(cudaStreamCreate(&stream));
+    checkCudaErrors(cudaMalloc((void**)&d_mass_fraction, sizeof(double) * num_species * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_mole_fraction, sizeof(double) * num_species * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_mean_mole_weight, sizeof(double) * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_T_poly, sizeof(double) * 5 * num_cells));
+
+    checkCudaErrors(cudaMalloc((void**)&d_species_viscosities, sizeof(double) * num_species * num_cells));
+    checkCudaErrors(cudaMalloc((void**)&d_species_thermal_conductivities, sizeof(double) * num_species * num_cells));
     std::cout << "dfThermo initialized" << std::endl;
 }
 

@@ -66,6 +66,8 @@ int main()
     std::cout << "CPU time : " << (double)(end - start) / CLOCKS_PER_SEC << " s" << std::endl;
     
     dfThermo GPUThermo("ES80_H2-7-16.yaml", num_cells);
+    init_const_coeff_ptr(GPUThermo.nasa_coeffs, GPUThermo.viscosity_coeffs, GPUThermo.thermal_conductivity_coeffs, 
+            GPUThermo.binary_diffusion_coeffs, GPUThermo.molecular_weights);
 
     // initialize GPU data
     double *d_p, *d_T, *d_he, *d_Y;
@@ -99,4 +101,6 @@ int main()
     GPUThermo.sync();
     end = clock();
     std::cout << "GPU time : " << (double)(end - start) / CLOCKS_PER_SEC << " s" << std::endl;
+    GPUThermo.compareThermoConductivity(d_alpha, alpha, false);
+    GPUThermo.compareViscosity(d_mu, mu, false);
 }
